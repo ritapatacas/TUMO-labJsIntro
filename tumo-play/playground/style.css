@@ -1,0 +1,155 @@
+/* TumoPlay Playground — arcade look */
+
+:root {
+  --bg: #0d0d1a;
+  --bg-glow: #1f1440;
+  --neon-cyan: #22e4ff;
+  --neon-magenta: #ff3df2;
+  --neon-yellow: #ffe14d;
+  --text: #f2f2ff;
+  --text-dim: #b8b8d9;
+  --font-mono: "Courier New", ui-monospace, Menlo, Consolas, monospace;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, var(--bg-glow) 0%, var(--bg) 60%) fixed, var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+/* Header */
+
+.header {
+  text-align: center;
+  margin: 8px 0 20px;
+}
+
+.logo {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  letter-spacing: 0.08em;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 8px rgba(34, 228, 255, 0.7), 0 0 24px rgba(34, 228, 255, 0.35);
+}
+
+.logo-accent {
+  color: var(--neon-magenta);
+  text-shadow: 0 0 8px rgba(255, 61, 242, 0.7), 0 0 24px rgba(255, 61, 242, 0.35);
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--neon-yellow);
+}
+
+/* Game area */
+
+.main {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.arcade-frame {
+  width: 100%;
+  padding: 10px;
+  border-radius: 18px;
+  background: #05050d;
+  border: 3px solid var(--neon-cyan);
+  box-shadow:
+    0 0 12px rgba(34, 228, 255, 0.6),
+    0 0 36px rgba(255, 61, 242, 0.25),
+    inset 0 0 12px rgba(34, 228, 255, 0.25);
+  animation: glow 3s ease-in-out infinite alternate;
+}
+
+#tumoplay canvas {
+  width: 100%;
+  margin: 0 auto;
+  border-radius: 8px;
+  image-rendering: pixelated;
+  outline: none;
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 12px rgba(34, 228, 255, 0.6), 0 0 36px rgba(255, 61, 242, 0.25), inset 0 0 12px rgba(34, 228, 255, 0.25); }
+  to   { box-shadow: 0 0 18px rgba(34, 228, 255, 0.85), 0 0 48px rgba(255, 61, 242, 0.4), inset 0 0 12px rgba(34, 228, 255, 0.25); }
+}
+
+/* Controls */
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.button {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--neon-yellow);
+  border: none;
+  border-radius: 12px;
+  padding: 14px 36px;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #b39400, 0 0 20px rgba(255, 225, 77, 0.4);
+  transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+}
+
+.button:hover {
+  background: #fff07a;
+}
+
+.button:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #b39400, 0 0 12px rgba(255, 225, 77, 0.4);
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--neon-magenta);
+  outline-offset: 4px;
+}
+
+.help {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-frame { animation: none; }
+  .button { transition: none; }
+}

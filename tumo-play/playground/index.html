@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TumoPlay Playground</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="logo">TUMO<span class="logo-accent">PLAY</span></h1>
+    <p class="subtitle">Playground</p>
+  </header>
+
+  <main class="main">
+    <div class="arcade-frame">
+      <div id="tumoplay"></div>
+    </div>
+
+    <div class="controls">
+      <button id="restart-button" class="button" type="button">Reiniciar</button>
+      <p class="help">Setas para mover · Apanha 10 moedas · Foge do inimigo vermelho · Enter também reinicia</p>
+    </div>
+  </main>
+
+  <script src="../lib/tumoplay.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

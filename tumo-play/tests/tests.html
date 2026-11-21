@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <title>TumoPlay — testes</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 16px; }
+    .pass { color: #4ade80; } .fail { color: #f87171; }
+  </style>
+  <script>
+    // Replace requestAnimationFrame with a manual clock, so the loop is deterministic.
+    window.__frames = [];
+    window.__now = 0;
+    window.__rafId = 0;
+    window.requestAnimationFrame = function (cb) { window.__frames.push(cb); return ++window.__rafId; };
+    window.cancelAnimationFrame = function () { window.__frames = []; };
+    window.tick = function (ms) {
+      window.__now += ms;
+      const frames = window.__frames;
+      window.__frames = [];
+      for (const cb of frames) cb(window.__now);
+    };
+  </script>
+  <script>
+    // Record globals right before the library loads.
+    window.__globalsBefore = new Set(Object.getOwnPropertyNames(window));
+  </script>
+  <script src="../lib/tumoplay.js"></script>
+  <script>
+    window.__newGlobals = Object.getOwnPropertyNames(window).filter(function (n) {
+      return !window.__globalsBefore.has(n) && n !== "__globalsBefore";
+    });
+  </script>
+</head>
+<body>
+  <h1>TumoPlay — testes</h1>
+  <ul id="results"></ul>
+  <script>
+    const T = TumoPlay;
+    const results = [];
+    const newGlobals = window.__newGlobals;
+
+    function check(name, condition, detail) {
+      results.push({ name: name, ok: Boolean(condition), detail: detail });
+    }
+    function key(type, code, extra) {
+      const e = new KeyboardEvent(type, Object.assign({ code: code, bubbles: true, cancelable: true }, extra || {}));
+      window.dispatchEvent(e);
+      return e;
+    }
+    function run(ms, step) {        // advance time in frames of `step` ms
+      for (let t = 0; t < ms; t += step) tick(step);
+    }
+    function fresh() {               // a clean world with no callbacks
+      T.createGame({ width: 600, height: 400 });
+      tick(16);
+    }
+    function captureErrors(fn) {
+      const original = console.error;
+      let count = 0;
+      console.error = function () { count++; };
+      try { fn(); } finally { console.error = original; }
+      return count;
+    }
+    function quietWarn(fn) {
+      const original = console.warn;
+      console.warn = function () {};
+      try { fn(); } finally { console.warn = original; }
+    }
+
+    // --- Globals
+    check("Única global nova é TumoPlay", newGlobals.length === 1 && newGlobals[0] === "TumoPlay", newGlobals.join(","));
+
+    // --- Errors before createGame
+    let threw = false;
+    try { T.createSprite({}); } catch (e) { threw = /createGame\(\)/.test(e.message); }
+    check("Erro claro antes de createGame", threw);
+
+    // --- Startup
+    T.createGame({ width: 320, height: 200 });
+    let canvases = document.querySelectorAll("canvas");
+    check("createGame cria um canvas", canvases.length === 1 && canvases[0].width === 320 && canvases[0].height === 200);
+    check("width/height expostos", T.width === 320 && T.height === 200);
+    quietWarn(function () { T.createGame({ width: 600, height: 400 }); });
+    canvases = document.querySelectorAll("canvas");
+    check("Segundo createGame substitui o primeiro", canvases.length === 1 && canvases[0].width === 600);
+
+    // --- Loop
+    fresh();
+    let updates = 0, lastDt = 0;
+    T.onUpdate(function (dt) { updates++; lastDt = dt; });
+    run(1000, 16);
+    check("Sem startGame não há atualizações", updates === 0);
+    T.startGame();
+    run(1000, 16);
+    check("startGame corre onUpdate (~60/s)", updates >= 58 && updates <= 61, updates);
+    check("deltaTime ≈ 1/60", Math.abs(lastDt - 1 / 60) < 1e-9);
+    T.stopGame();
+    let before = updates;
+    run(500, 16);
+    check("stopGame para as atualizações", updates === before);
+    tick(5000);                     // long pause
+    T.startGame();
+    before = updates;
+    tick(16); tick(16);
+    check("startGame retoma sem salto", updates - before <= 2, updates - before);
+    check("isRunning", T.isRunning() === true);
+
+    // --- Framerate independence
+    for (const step of [8, 33]) {
+      fresh();
+      let n = 0;
+      T.onUpdate(function () { n++; });
+      T.startGame();
+      tick(step);
+      n = 0;
+      run(1000, step);
+      check("~60 atualizações/s com frames de " + step + " ms", n >= 58 && n <= 61, n);
+    }
+
+    // --- Sprites
+    fresh();
+    const s = T.createSprite({ x: 10, y: 20 });
+    check("Omissões do sprite", s.width === 32 && s.height === 32 && s.color === "white" && s.visible && s.shape === "rect");
+    s.move(5, -5);
+    check("move", s.x === 15 && s.y === 15);
+    s.setPosition(1, 2);
+    check("setPosition", s.x === 1 && s.y === 2);
+    s.hide();
+    check("hide", s.visible === false);
+    s.show();
+    check("show", s.visible === true);
+    const copy = T.getSprites();
+    copy.pop();
+    check("getSprites devolve uma cópia", T.getSprites().length === 1);
+    s.remove();
+    s.remove();
+    check("remove (duas vezes sem erro)", s.removed === true && T.getSprites().length === 0);
+
+    fresh();
+    const many = [];
+    for (let i = 0; i < 5; i++) many.push(T.createSprite({}));
+    let crashed = captureErrors(function () {
+      T.onUpdate(function () { for (const m of many) m.remove(); });
+      T.startGame();
+      run(100, 16);
+    });
+    check("Remover durante onUpdate é seguro", crashed === 0 && T.getSprites().length === 0);
+
+    // --- Speed
+    fresh();
+    const mover = T.createSprite({ x: 0, speedX: 2 });
+    T.startGame();
+    let speedUpdates = 0;
+    T.onUpdate(function () { speedUpdates++; if (speedUpdates === 60) T.stopGame(); });
+    run(2000, 16);
+    check("speedX = 2 → +120 px em 60 atualizações", mover.x === 120, mover.x);
+
+    // --- Collisions
+    fresh();
+    const a = T.createSprite({ x: 0, y: 0, width: 10, height: 10 });
+    const b = T.createSprite({ x: 5, y: 5, width: 10, height: 10 });
+    const c = T.createSprite({ x: 10, y: 0, width: 10, height: 10 });
+    check("Sobreposição → true", T.checkCollision(a, b) === true);
+    check("Só tocar na aresta → false", T.checkCollision(a, c) === false);
+    check("a === a → false", T.checkCollision(a, a) === false);
+    check("null → false", T.checkCollision(a, null) === false);
+    b.hide();
+    check("Invisível → false", T.checkCollision(a, b) === false);
+    b.show();
+    check("checkCollisionWithList devolve o sprite", T.checkCollisionWithList(a, [c, b]) === b);
+    b.remove();
+    check("Removido → false", T.checkCollision(a, b) === false);
+    check("checkCollisionWithList → null", T.checkCollisionWithList(a, [c, b, null, 42]) === null);
+
+    // --- Random
+    const seen = new Set();
+    let outside = false;
+    for (let i = 0; i < 10000; i++) {
+      const r = T.randomInt(1, 3);
+      seen.add(r);
+      if (r < 1 || r > 3 || !Number.isInteger(r)) outside = true;
+    }
+    check("randomInt(1,3) produz 1, 2 e 3", seen.size === 3 && !outside);
+    check("random(5,5) = 5", T.random(5, 5) === 5);
+    let swapped = true;
+    for (let i = 0; i < 1000; i++) {
+      const r1 = T.random(10, 5), r2 = T.randomInt(3, 1);
+      if (r1 < 5 || r1 >= 10 || r2 < 1 || r2 > 3) swapped = false;
+    }
+    check("Limites trocados funcionam", swapped);
+
+    // --- Keyboard
+    fresh();
+    let downs = 0, ups = 0, holds = 0;
+    T.onKeyDown("a", function () { downs++; });
+    T.onKeyUp("A", function () { ups++; });
+    T.onKey("KeyA", function () { holds++; });
+    let upHolds = 0;
+    T.onKey("up", function () { upHolds++; });
+    T.startGame();
+    key("keydown", "KeyA");
+    key("keydown", "KeyA", { repeat: true });
+    check("isKeyPressed", T.isKeyPressed("a") && T.isKeyPressed("KeyA"));
+    check("onKeyDown só uma vez com repeat", downs === 1, downs);
+    run(160, 16);
+    check("onKey contínuo", holds >= 8, holds);
+    key("keyup", "KeyA");
+    check("onKeyUp", ups === 1 && !T.isKeyPressed("a"));
+    const ev = key("keydown", "ArrowUp");
+    check("preventDefault nas setas", ev.defaultPrevented === true);
+    run(50, 16);
+    check("Normalização \"up\"", upHolds >= 2, upHolds);
+    key("keyup", "ArrowUp");
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    input.focus();
+    const ev2 = key("keydown", "ArrowDown");
+    check("Sem preventDefault com foco num input", ev2.defaultPrevented === false);
+    input.blur();
+    input.remove();
+    window.dispatchEvent(new Event("blur"));
+    check("blur liberta teclas", !T.isKeyPressed("ArrowDown"));
+    T.stopGame();
+    key("keydown", "KeyA");
+    check("onKeyDown funciona com o jogo parado", downs === 2);
+    key("keyup", "KeyA");
+
+    // --- Delay
+    fresh();
+    let fired = 0;
+    T.delay(500, function () { fired++; });
+    T.startGame();
+    run(480, 16);
+    check("delay ainda não disparou", fired === 0);
+    T.stopGame();
+    run(1000, 16);
+    check("delay pausa com stopGame", fired === 0);
+    T.startGame();
+    run(100, 16);
+    check("delay dispara após o tempo de jogo", fired === 1);
+    const id = T.delay(100, function () { fired++; });
+    T.cancelDelay(id);
+    T.cancelDelay(9999);
+    T.delay(100, function () { fired++; });
+    T.clear();
+    run(300, 16);
+    check("cancelDelay e clear cancelam", fired === 1);
+
+    // --- UI
+    fresh();
+    T.clear();
+    check("HUD invisível no início", T.getScore() === 0);
+    T.setScore(5);
+    T.addScore();
+    T.addScore(3);
+    check("setScore/addScore/getScore", T.getScore() === 9);
+    T.setLives(-1);
+    check("setLives(-1) → 0", T.getLives() === 0);
+
+    // --- clear()
+    fresh();
+    let kept = 0;
+    T.onUpdate(function () { kept++; });
+    T.createSprite({});
+    T.setScore(3);
+    T.startGame();
+    T.clear();
+    run(100, 16);
+    check("clear remove sprites e repõe pontuação", T.getSprites().length === 0 && T.getScore() === 0);
+    check("clear mantém callbacks e estado ligado", kept > 0 && T.isRunning());
+
+    // --- Errors in callbacks
+    fresh();
+    const errors = captureErrors(function () {
+      T.onUpdate(function () { throw new Error("boom"); });
+      T.startGame();
+      run(1000, 16);
+    });
+    check("Exceção → um console.error e jogo parado", errors === 1 && !T.isRunning(), errors);
+
+    // --- Report
+    const list = document.getElementById("results");
+    let failed = 0;
+    for (const r of results) {
+      const li = document.createElement("li");
+      li.className = r.ok ? "pass" : "fail";
+      li.textContent = (r.ok ? "✔ " : "✘ ") + r.name + (r.ok || r.detail === undefined ? "" : " (" + r.detail + ")");
+      list.appendChild(li);
+      if (!r.ok) failed++;
+      console.log((r.ok ? "PASS " : "FAIL ") + r.name + (r.detail !== undefined ? " [" + r.detail + "]" : ""));
+    }
+    window.__testSummary = { total: results.length, failed: failed };
+    console.log("RESULT " + (results.length - failed) + "/" + results.length);
+  </script>
+</body>
+</html>
