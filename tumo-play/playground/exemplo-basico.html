@@ -14,30 +14,30 @@
   <script src="../lib/tumoplay.js"></script>
   <script>
     // 1. Create the game area (600 x 400 pixels)
-    TumoPlay.createGame({ width: 600, height: 400 });
+    Game.createGame({ width: 600, height: 400 });
 
     // 2. Create the player: a blue square
-    let player = TumoPlay.createSprite({ x: 284, y: 184, color: "#3b82f6" });
+    let player = Game.createSprite({ x: 284, y: 184, color: "#3b82f6" });
 
     // 3. How many pixels the player moves each time
     let speed = 3;
 
     // 4. Arrow keys move the player
-    TumoPlay.onKey("ArrowUp", function () {
+    Game.onKey("ArrowUp", function () {
       player.move(0, -speed);
     });
-    TumoPlay.onKey("ArrowDown", function () {
+    Game.onKey("ArrowDown", function () {
       player.move(0, speed);
     });
-    TumoPlay.onKey("ArrowLeft", function () {
+    Game.onKey("ArrowLeft", function () {
       player.move(-speed, 0);
     });
-    TumoPlay.onKey("ArrowRight", function () {
+    Game.onKey("ArrowRight", function () {
       player.move(speed, 0);
     });
 
     // 5. Start!
-    TumoPlay.startGame();
+    Game.startGame();
   </script>
 </body>
 </html>

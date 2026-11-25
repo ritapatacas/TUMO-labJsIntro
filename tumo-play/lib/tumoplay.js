@@ -7,7 +7,7 @@
  * game logic: students write their own variables, functions, conditions,
  * loops and arrays.
  *
- * Load with a normal <script> tag. Exposes a single global: window.TumoPlay
+ * Load with a normal <script> tag. Exposes a single global: window.Game
  */
 (function () {
   "use strict";
@@ -398,6 +398,13 @@
     listening: false,
 
     register(list, key, callback, fnName) {
+      // Also accepts an object: onKey({ up: function () {...}, down: function () {...} })
+      if (key !== null && typeof key === "object") {
+        for (const name of Object.keys(key)) {
+          this.register(list, name, key[name], fnName);
+        }
+        return;
+      }
       checkFunction(callback, fnName);
       const canonical = normalizeKeyName(key);
       if (!canonical) {
@@ -473,7 +480,7 @@
     },
   };
 
-  /** Call callback on every update while key is held. @param {string} key @param {Function} callback */
+  /** Call callback on every update while key is held. @param {string|object} key a key name, or an object { key: callback } @param {Function} [callback] */
   function onKey(key, callback) {
     InputManager.register(InputManager.holdCallbacks, key, callback, "onKey");
   }
@@ -833,7 +840,7 @@
    * 9. Public API
    * ====================================================================== */
 
-  window.TumoPlay = Object.freeze({
+  window.Game = Object.freeze({
     // A. Setup
     createGame: createGame,
     startGame: startGame,

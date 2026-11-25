@@ -78,7 +78,7 @@ def main():
 
         # 3. Playground behaviour
         page, messages = open_page(browser, f"{http_base}/playground/index.html")
-        info = page.evaluate("({ coins: coins.length, lives: TumoPlay.getLives(), score: TumoPlay.getScore(), running: TumoPlay.isRunning() })")
+        info = page.evaluate("({ coins: coins.length, lives: Game.getLives(), score: Game.getScore(), running: Game.isRunning() })")
         report("playground starts with 5 coins, 3 lives, 0 points", info == {"coins": 5, "lives": 3, "score": 0, "running": True}, info)
 
         x0 = page.evaluate("player.x")
@@ -96,22 +96,22 @@ def main():
         # Collect a coin by placing it under the player.
         page.evaluate("coins[0].setPosition(player.x + 5, player.y + 5)")
         page.wait_for_timeout(100)
-        info = page.evaluate("({ coins: coins.length, score: TumoPlay.getScore(), sprites: TumoPlay.getSprites().length })")
+        info = page.evaluate("({ coins: coins.length, score: Game.getScore(), sprites: Game.getSprites().length })")
         report("coin gives 1 point and is replaced", info == {"coins": 5, "score": 1, "sprites": 7}, info)
 
         # Touch the enemy.
         page.evaluate("enemy.speedX = 0; enemy.speedY = 0; enemy.setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        info = page.evaluate("({ lives: TumoPlay.getLives(), inv: isInvincible, x: player.x })")
+        info = page.evaluate("({ lives: Game.getLives(), inv: isInvincible, x: player.x })")
         report("enemy takes a life + invincibility + back to start", info["lives"] == 2 and info["inv"] and info["x"] == 30, info)
         page.evaluate("enemy.setPosition(500, 50)")
         page.wait_for_timeout(1300)
         report("invincibility ends after ~1 s", page.evaluate("isInvincible") is False)
 
         # Victory.
-        page.evaluate("enemy.setPosition(500, 50); TumoPlay.setScore(9); coins[0].setPosition(player.x, player.y)")
+        page.evaluate("enemy.setPosition(500, 50); Game.setScore(9); coins[0].setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        report("10 points → game stops", page.evaluate("TumoPlay.isRunning()") is False)
+        report("10 points → game stops", page.evaluate("Game.isRunning()") is False)
 
         # Restart several times; speed must not double.
         for _ in range(3):
@@ -119,20 +119,20 @@ def main():
             page.wait_for_timeout(50)
         page.click("#restart-button")
         page.wait_for_timeout(50)
-        info = page.evaluate("({ coins: coins.length, lives: TumoPlay.getLives(), score: TumoPlay.getScore(), running: TumoPlay.isRunning(), sprites: TumoPlay.getSprites().length, focused: document.activeElement.id })")
+        info = page.evaluate("({ coins: coins.length, lives: Game.getLives(), score: Game.getScore(), running: Game.isRunning(), sprites: Game.getSprites().length, focused: document.activeElement.id })")
         report("restart resets everything", info == {"coins": 5, "lives": 3, "score": 0, "running": True, "sprites": 7, "focused": ""}, info)
         page.evaluate("enemy.speedX = 0; enemy.speedY = 0; enemy.setPosition(500, 50); player.setPosition(100, 100)")
         x0 = page.evaluate("player.x")
         page.keyboard.down("ArrowRight")
-        page.evaluate("new Promise(r => { let n = 0; TumoPlay.onUpdate(function () { n++; if (n === 30) r(); }); })")
+        page.evaluate("new Promise(r => { let n = 0; Game.onUpdate(function () { n++; if (n === 30) r(); }); })")
         page.keyboard.up("ArrowRight")
         moved = page.evaluate("player.x") - x0
         report("speed does not double after restarts (~4 px/update)", 100 <= moved <= 140, moved)
 
         # Game over.
-        page.evaluate("TumoPlay.setLives(1); isInvincible = false; enemy.setPosition(player.x, player.y)")
+        page.evaluate("Game.setLives(1); isInvincible = false; enemy.setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        report("0 lives → game over", page.evaluate("TumoPlay.getLives() === 0 && !TumoPlay.isRunning()"))
+        report("0 lives → game over", page.evaluate("Game.getLives() === 0 && !Game.isRunning()"))
         report("no console problems while playing", not problems(messages), problems(messages))
         page.close()
 

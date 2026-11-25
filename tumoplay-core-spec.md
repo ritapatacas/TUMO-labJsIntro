@@ -31,7 +31,7 @@ A biblioteca esconde a parte técnica (DOM, Canvas API, event listeners, `reques
 | Renderização | HTML5 Canvas 2D |
 | Dependências | Zero. Sem frameworks, sem npm, sem Node.js, sem bundlers, sem CDNs |
 | Execução | Abrir `index.html` diretamente no browser (`file://`) **ou** através de um servidor local simples. Ambos têm de funcionar |
-| Formato da biblioteca | Um único ficheiro `tumoplay.js`, carregado com `<script>` normal (sem `type="module"`), que expõe **um único** objeto global `window.TumoPlay` |
+| Formato da biblioteca | Um único ficheiro `tumoplay.js`, carregado com `<script>` normal (sem `type="module"`), que expõe **um único** objeto global `window.Game` |
 | Editores | VS Code, CodePen, JSFiddle, StackBlitz (colar o conteúdo de `tumoplay.js` no painel de JS antes do código do jogo tem de funcionar) |
 | Comentários no código | Inglês |
 | Mensagens de erro/aviso para o estudante | Português europeu, amigáveis, com prefixo `TumoPlay:` (ex.: `TumoPlay: chama createGame() antes de createSprite().`) |
@@ -194,7 +194,7 @@ Um único ficheiro, uma IIFE, com secções claramente marcadas por comentários
 | 6 | `Timers` | `delay`, `cancelDelay`, processamento por tempo de jogo |
 | 7 | `GameUI` | Pontuação, vidas, mensagem, desenho do HUD |
 | 8 | `GameEngine` | `createGame`, ciclo fixo, `startGame`, `stopGame`, `clear`, orquestração |
-| 9 | API pública | `window.TumoPlay = Object.freeze({ … })` com todas as funções públicas |
+| 9 | API pública | `window.Game = Object.freeze({ … })` com todas as funções públicas |
 
 Cada função pública tem um comentário JSDoc curto em inglês (`@param`, `@returns`). O ficheiro final deve ficar legível por um formador: alvo indicativo de 600–900 linhas, sem truques.
 
@@ -204,7 +204,7 @@ Proteção contra uso errado: chamar qualquer função que dependa do jogo antes
 
 ## 4. API pública (contrato)
 
-Todas as funções são acessíveis como `TumoPlay.nome(...)`.
+Todas as funções são acessíveis como `Game.nome(...)`.
 
 ### A. Inicialização
 
@@ -216,7 +216,7 @@ Todas as funções são acessíveis como `TumoPlay.nome(...)`.
 | `clear()` | Repõe o mundo (ver 2.5) |
 | `isRunning()` | Extra mínimo: devolve `true`/`false`. Útil para `if` no código do estudante |
 
-Expor também, só para leitura, `TumoPlay.width` e `TumoPlay.height` (getters) para o estudante poder escrever `TumoPlay.width - player.width` em vez de números mágicos.
+Expor também, só para leitura, `Game.width` e `Game.height` (getters) para o estudante poder escrever `Game.width - player.width` em vez de números mágicos.
 
 ### B. Desenho
 
@@ -358,21 +358,21 @@ Estilo arcade, moderno e colorido, adequado a 12–18 anos:
 
 ### 5.3 `game.js` — TumoPlay Playground
 
-**Este ficheiro é material didático.** Deve parecer código que um formador escreveria à frente da turma: claro, comentado (em inglês, como o resto do código, mas com comentários que expliquem o *porquê*), dividido em secções numeradas, sem abstrações avançadas. Usar `let`/`const`, funções declaradas com `function nome() {}`, `for` clássico ou `for…of` em arrays. **Nada de classes, arrow functions encadeadas, `map`/`filter`/`reduce`, destructuring, operadores ternários aninhados ou optional chaining.** Usar sempre o prefixo `TumoPlay.` (explícito é melhor para principiantes).
+**Este ficheiro é material didático.** Deve parecer código que um formador escreveria à frente da turma: claro, comentado (em inglês, como o resto do código, mas com comentários que expliquem o *porquê*), dividido em secções numeradas, sem abstrações avançadas. Usar `let`/`const`, funções declaradas com `function nome() {}`, `for` clássico ou `for…of` em arrays. **Nada de classes, arrow functions encadeadas, `map`/`filter`/`reduce`, destructuring, operadores ternários aninhados ou optional chaining.** Usar sempre o prefixo `Game.` (explícito é melhor para principiantes).
 
 Regras do jogo:
 
 1. Cenário 600 × 400, fundo escuro.
 2. Jogador: quadrado azul (`#3b82f6` ou semelhante), 32 × 32, posição inicial guardada em variáveis (`START_X`, `START_Y`), por exemplo no canto inferior esquerdo.
-3. Movimento com setas usando `TumoPlay.onKey` (ou `isKeyPressed` dentro de `onUpdate`; escolher **um** estilo e explicar no comentário). Velocidade numa variável `playerSpeed = 4`.
+3. Movimento com setas usando `Game.onKey` (ou `isKeyPressed` dentro de `onUpdate`; escolher **um** estilo e explicar no comentário). Velocidade numa variável `playerSpeed = 4`.
 4. O jogador **não pode sair do ecrã**: lógica com `if` escrita no `game.js`.
 5. Um array `coins` com 5 moedas amarelas (`shape: "circle"`, 20 × 20) em posições aleatórias (`randomInt`), criadas por uma função `createCoin()` chamada dentro de um loop `for`. Evitar criar moedas por cima do jogador (repetir o sorteio, com um `while` simples e um limite de tentativas).
 6. Ao tocar numa moeda: remover o sprite (`coin.remove()`), removê-lo do array `coins` (com `indexOf` + `splice`, explicado no comentário), `addScore(1)` e criar uma moeda nova.
 7. Inimigo vermelho (32 × 32) com `speedX`/`speedY` aleatórios (sinal aleatório, magnitude 2–3), que ressalta nas paredes com `if` no `game.js` (invertendo a velocidade e corrigindo a posição para dentro do ecrã). Começa longe do jogador.
-8. Ao tocar no inimigo: perde uma vida (`setLives(getLives() - 1)`) e volta à posição inicial. Para evitar perder várias vidas de seguida, uma invulnerabilidade curta (~1 s) implementada com uma variável boolean `isInvincible` + `TumoPlay.delay`, e o jogador a piscar (alternar `show`/`hide` ou a cor) durante esse tempo. É lógica do estudante e mostra `delay` em ação.
+8. Ao tocar no inimigo: perde uma vida (`setLives(getLives() - 1)`) e volta à posição inicial. Para evitar perder várias vidas de seguida, uma invulnerabilidade curta (~1 s) implementada com uma variável boolean `isInvincible` + `Game.delay`, e o jogador a piscar (alternar `show`/`hide` ou a cor) durante esse tempo. É lógica do estudante e mostra `delay` em ação.
 9. Pontuação 10: `stopGame()` + `showMessage("VITÓRIA!\nCarrega em Reiniciar ou Enter")`.
 10. Vidas 0: `stopGame()` + `showMessage("GAME OVER\nCarrega em Reiniciar ou Enter")`.
-11. Reiniciar (botão **e** tecla Enter via `onKeyDown`): função `resetGame()` que faz `TumoPlay.clear()`, repõe as variáveis (`coins = []`, etc.), recria jogador, moedas e inimigo, `setScore(0)`, `setLives(3)`, `hideMessage()`, `startGame()`. O mesmo `resetGame()` é usado para o arranque inicial (uma única fonte de verdade). Os callbacks `onUpdate`/`onKey…` são registados **uma vez**, fora de `resetGame()` — explicar no comentário porquê (`clear()` mantém-nos).
+11. Reiniciar (botão **e** tecla Enter via `onKeyDown`): função `resetGame()` que faz `Game.clear()`, repõe as variáveis (`coins = []`, etc.), recria jogador, moedas e inimigo, `setScore(0)`, `setLives(3)`, `hideMessage()`, `startGame()`. O mesmo `resetGame()` é usado para o arranque inicial (uma única fonte de verdade). Os callbacks `onUpdate`/`onKey…` são registados **uma vez**, fora de `resetGame()` — explicar no comentário porquê (`clear()` mantém-nos).
 12. Depois de clicar em "Reiniciar", chamar `button.blur()`, para que a barra de espaços/Enter não volte a "clicar" no botão.
 13. Desenhar algo com a API de desenho, para a demonstrar: por exemplo, uma grelha subtil ou estrelas de fundo com `drawRect`/`drawCircle` num loop (posições geradas uma vez com `random` e guardadas num array), e um `drawText` pequeno com "Moedas: X/10" ou o nome do jogo no fundo.
 

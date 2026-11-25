@@ -36,7 +36,7 @@
   <h1>TumoPlay — testes</h1>
   <ul id="results"></ul>
   <script>
-    const T = TumoPlay;
+    const T = Game;
     const results = [];
     const newGlobals = window.__newGlobals;
 
@@ -69,7 +69,7 @@
     }
 
     // --- Globals
-    check("Única global nova é TumoPlay", newGlobals.length === 1 && newGlobals[0] === "TumoPlay", newGlobals.join(","));
+    check("Única global nova é Game", newGlobals.length === 1 && newGlobals[0] === "Game", newGlobals.join(","));
 
     // --- Errors before createGame
     let threw = false;
