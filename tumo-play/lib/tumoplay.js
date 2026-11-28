@@ -234,10 +234,11 @@
   class Sprite {
     constructor(options) {
       const o = options || {};
-      this.x = isNumber(o.x) ? o.x : 0;
-      this.y = isNumber(o.y) ? o.y : 0;
       this.width = isNumber(o.width) ? o.width : 32;
       this.height = isNumber(o.height) ? o.height : 32;
+      // Without x / y the sprite starts in the middle of the game area.
+      this.x = isNumber(o.x) ? o.x : (game.width - this.width) / 2;
+      this.y = isNumber(o.y) ? o.y : (game.height - this.height) / 2;
       this.color = o.color || "white";
       this.visible = o.visible === undefined ? true : Boolean(o.visible);
       this.speedX = isNumber(o.speedX) ? o.speedX : 0;
@@ -317,6 +318,7 @@
    */
   function createSprite(options) {
     requireGame("createSprite");
+    syncSize();
     if (options !== undefined && (options === null || typeof options !== "object")) {
       warnOnce("createSprite() recebe um objeto, por exemplo createSprite({ x: 10, y: 20 }).");
       options = {};
@@ -714,6 +716,7 @@
       if (this.lastTime === null) this.lastTime = now;
       const elapsed = clamp((now - this.lastTime) / 1000, 0, MAX_FRAME_TIME);
       this.lastTime = now;
+      syncSize();
 
       if (this.running) {
         this.accumulator += elapsed;
@@ -778,8 +781,8 @@
       game = null;
     }
 
-    const width = isNumber(o.width) && o.width > 0 ? Math.round(o.width) : 600;
-    const height = isNumber(o.height) && o.height > 0 ? Math.round(o.height) : 400;
+    const width = isNumber(o.width) && o.width > 0 ? Math.round(o.width) : window.innerWidth;
+    const height = isNumber(o.height) && o.height > 0 ? Math.round(o.height) : window.innerHeight;
 
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -803,8 +806,28 @@
       background: o.background || "#111111",
     };
 
+    api.size.width = width;
+    api.size.height = height;
+    api.player = null;
+
     InputManager.listen();
     Engine.startLoop();
+  }
+
+  /** Keep Game.width / Game.height and the real game area in sync (students may change them). */
+  function syncSize() {
+    if (!game) return;
+    const w = api.size.width, h = api.size.height;
+    if (w !== game.width || h !== game.height) {
+      if (isNumber(w) && isNumber(h) && w > 0 && h > 0) {
+        game.width = game.canvas.width = Math.round(w);
+        game.height = game.canvas.height = Math.round(h);
+      } else {
+        warnOnce("width e height têm de ser números maiores que 0.");
+      }
+    }
+    api.size.width = game.width;
+    api.size.height = game.height;
   }
 
   /** Turn updates on (idempotent). */
@@ -823,6 +846,7 @@
   function clear() {
     requireGame("clear");
     Engine.clearWorld();
+    api.player = null;
   }
 
   /** @returns {boolean} true if updates are running */
@@ -840,47 +864,59 @@
    * 9. Public API
    * ====================================================================== */
 
-  window.Game = Object.freeze({
-    // A. Setup
-    createGame: createGame,
+  // What students see first when they print Game: the essentials.
+  // The rest lives in groups (Game.setup, Game.keys, Game.draw, Game.ui, Game.more).
+  // random() and randomInt() are plain helper functions, outside Game.
+  const api = {
     startGame: startGame,
-    stopGame: stopGame,
-    clear: clear,
-    isRunning: isRunning,
-    get width() { return game ? game.width : 0; },
-    get height() { return game ? game.height : 0; },
-    // B. Drawing
-    drawRect: drawRect,
-    drawCircle: drawCircle,
-    drawText: drawText,
-    drawImage: drawImage,
-    clearCanvas: clearCanvas,
-    // C. Sprites
+    // Plain properties. Changing size.width / size.height resizes the game area (see syncSize).
+    size: { width: 0, height: 0 },
+    // Free slot for the student's main sprite (Game.setup.clear() empties it).
+    player: null,
     createSprite: createSprite,
-    removeSprite: removeSprite,
-    getSprites: getSprites,
-    // D. Keyboard
     onKey: onKey,
-    onKeyDown: onKeyDown,
-    onKeyUp: onKeyUp,
-    isKeyPressed: isKeyPressed,
-    // E. Update
     onUpdate: onUpdate,
-    // F. Collisions
     checkCollision: checkCollision,
-    checkCollisionWithList: checkCollisionWithList,
-    // G. Time and randomness
-    random: random,
-    randomInt: randomInt,
-    delay: delay,
-    cancelDelay: cancelDelay,
-    // H. Game UI
-    setScore: setScore,
-    addScore: addScore,
-    getScore: getScore,
-    setLives: setLives,
-    getLives: getLives,
     showMessage: showMessage,
-    hideMessage: hideMessage,
-  });
+    // Groups with the more specific functions
+    setup: Object.freeze({
+      createGame: createGame,
+      stopGame: stopGame,
+      clear: clear,
+    }),
+    keys: Object.freeze({
+      onDown: onKeyDown,
+      onUp: onKeyUp,
+      isPressed: isKeyPressed,
+    }),
+    draw: Object.freeze({
+      rect: drawRect,
+      circle: drawCircle,
+      text: drawText,
+      image: drawImage,
+      clear: clearCanvas,
+    }),
+    ui: Object.freeze({
+      setScore: setScore,
+      addScore: addScore,
+      getScore: getScore,
+      setLives: setLives,
+      getLives: getLives,
+      hideMessage: hideMessage,
+    }),
+    more: Object.freeze({
+      removeSprite: removeSprite,
+      delay: delay,
+      cancelDelay: cancelDelay,
+      isRunning: isRunning,
+      getSprites: getSprites,
+      checkCollisionWithList: checkCollisionWithList,
+    }),
+  };
+
+  // Helper functions available everywhere, without "Game."
+  window.random = random;
+  window.randomInt = randomInt;
+
+  window.Game = api;
 })();

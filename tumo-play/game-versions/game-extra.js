@@ -1,5 +1,6 @@
 // TumoPlay Playground (complete version)
-// Collect 10 coins, avoid the red enemy. You have 3 lives.
+// Collect as many coins as you can, avoid the red enemy. You have 3 lives.
+// Every coin makes the enemy a little faster.
 //
 // The explanations are inside "Notes" regions. In VS Code, fold them all with
 // Cmd+K Cmd+8 (Ctrl+K Ctrl+8), unfold with Cmd+K Cmd+9.
@@ -33,7 +34,7 @@ let color = {
 let START_X = 30;
 let START_Y = height - 62;
 let COINS_ON_SCREEN = 5;
-let COINS_TO_WIN = 10;
+let ENEMY_SPEED_UP = 0.3;
 
 let playerSpeed = 4;
 let player = null;
@@ -47,7 +48,7 @@ let blinkCounter = 0;
 // 2. Create the game
 // ---------------------------------------------------------------------
 
-Game.createGame({
+Game.setup.createGame({
   width: width,
   height: height,
   background: color.night,
@@ -69,20 +70,20 @@ let stars = [];
 
 for (let i = 0; i < 40; i++) {
   let star = {
-    x: Game.random(0, width),
-    y: Game.random(0, height),
-    size: Game.random(0.5, 1.8)
+    x: random(0, width),
+    y: random(0, height),
+    size: random(0.5, 1.8)
   };
   stars.push(star);
 }
 
 function drawBackground() {
   for (let star of stars) {
-    Game.drawCircle(star.x, star.y, star.size, color.star);
+    Game.draw.circle(star.x, star.y, star.size, color.star);
   }
 
-  let coinsText = "Moedas: " + Game.getScore() + "/" + COINS_TO_WIN;
-  Game.drawText(coinsText, width / 2, height - 26, {
+  let coinsText = "Moedas: " + Game.ui.getScore();
+  Game.draw.text(coinsText, width / 2, height - 26, {
     size: 16,
     color: color.lightYellow,
     align: "center"
@@ -108,13 +109,13 @@ function isNearPlayer(x, y, minDistance) {
 }
 
 function placeRandomly(sprite) {
-  let x = Game.randomInt(0, width - sprite.width);
-  let y = Game.randomInt(40, height - sprite.height - 30);
+  let x = randomInt(0, width - sprite.width);
+  let y = randomInt(40, height - sprite.height - 30);
   let tries = 0;
 
   while (isNearPlayer(x, y, 80) && tries < 20) {
-    x = Game.randomInt(0, width - sprite.width);
-    y = Game.randomInt(40, height - sprite.height - 30);
+    x = randomInt(0, width - sprite.width);
+    y = randomInt(40, height - sprite.height - 30);
     tries = tries + 1;
   }
 
@@ -146,12 +147,12 @@ function createEnemy() {
     name: "enemy"
   });
 
-  enemy.speedX = Game.random(2, 3);
-  enemy.speedY = Game.random(2, 3);
-  if (Game.randomInt(0, 1) === 0) {
+  enemy.speedX = random(2, 3);
+  enemy.speedY = random(2, 3);
+  if (randomInt(0, 1) === 0) {
     enemy.speedX = -enemy.speedX;
   }
-  if (Game.randomInt(0, 1) === 0) {
+  if (randomInt(0, 1) === 0) {
     enemy.speedY = -enemy.speedY;
   }
 }
@@ -198,7 +199,7 @@ function bounceEnemy() {
 // 2) The library does not know about our "coins" array, so we also remove
 //    it from there: indexOf finds the position, splice(position, 1)
 //    removes exactly one element at that position.
-// 3) Victory or a new coin (we always keep 5 coins on screen).
+// 3) A new coin (we always keep 5 coins on screen) and the enemy gets faster.
 // #endregion
 function collectCoin(coin) {
   coin.remove();
@@ -208,14 +209,20 @@ function collectCoin(coin) {
     coins.splice(index, 1);
   }
 
-  Game.addScore(1);
+  Game.ui.addScore(1);
 
-  if (Game.getScore() >= COINS_TO_WIN) {
-    Game.stopGame();
-    Game.showMessage("VITÓRIA!\nCarrega em Reiniciar ou Enter");
-  } else {
-    createCoin();
-  }
+  createCoin();
+  speedUpEnemy();
+}
+
+// #region Notes
+// The enemy keeps its direction (the sign of the speed) but gets a bit
+// faster: we add ENEMY_SPEED_UP to the absolute value of each speed.
+// Math.sign gives -1 or 1, so it works for both directions.
+// #endregion
+function speedUpEnemy() {
+  enemy.speedX = enemy.speedX + Math.sign(enemy.speedX) * ENEMY_SPEED_UP;
+  enemy.speedY = enemy.speedY + Math.sign(enemy.speedY) * ENEMY_SPEED_UP;
 }
 
 // #region Notes
@@ -223,18 +230,18 @@ function collectCoin(coin) {
 // Otherwise a short invincibility, so one touch does not take several lives.
 // #endregion
 function loseLife() {
-  Game.setLives(Game.getLives() - 1);
+  Game.ui.setLives(Game.ui.getLives() - 1);
   player.setPosition(START_X, START_Y);
 
-  if (Game.getLives() <= 0) {
-    Game.stopGame();
-    Game.showMessage("GAME OVER\nCarrega em Reiniciar ou Enter");
+  if (Game.ui.getLives() <= 0) {
+    Game.setup.stopGame();
+    Game.showMessage("GAME OVER\nCarrega em Enter");
     return;
   }
 
   isInvincible = true;
   blinkCounter = 0;
-  Game.delay(1000, function () {
+  Game.more.delay(1000, function () {
     isInvincible = false;
     player.setColor(color.blue);
   });
@@ -263,10 +270,10 @@ function blinkPlayer() {
 
 // #region Notes
 // One single function to start AND restart: a single source of truth.
-// Game.clear() removes sprites, delays, message and score.
+// Game.setup.clear() removes sprites, delays, message and score.
 // #endregion
 function resetGame() {
-  Game.clear();
+  Game.setup.clear();
 
   coins = [];
   isInvincible = false;
@@ -287,9 +294,9 @@ function resetGame() {
 
   createEnemy();
 
-  Game.setScore(0);
-  Game.setLives(3);
-  Game.hideMessage();
+  Game.ui.setScore(0);
+  Game.ui.setLives(3);
+  Game.ui.hideMessage();
   Game.startGame();
 }
 
@@ -303,7 +310,7 @@ function resetGame() {
 // onKeyDown runs once per press, even when the game is stopped.
 //
 // IMPORTANT: we register the callbacks only ONCE, here, outside resetGame().
-// Game.clear() keeps them, so registering them inside resetGame()
+// Game.setup.clear() keeps them, so registering them inside resetGame()
 // would add a copy at every restart and the player would get faster and faster.
 // #endregion
 Game.onKey({
@@ -321,15 +328,8 @@ Game.onKey({
   }
 });
 
-Game.onKeyDown("Enter", function () {
+Game.keys.onDown("Enter", function () {
   resetGame();
-});
-
-let restartButton = document.getElementById("restart-button");
-restartButton.addEventListener("click", function () {
-  resetGame();
-  // Remove focus from the button, so Space/Enter do not "click" it again.
-  restartButton.blur();
 });
 
 
@@ -347,12 +347,12 @@ Game.onUpdate(function (deltaTime) {
   bounceEnemy();
   blinkPlayer();
 
-  let coin = Game.checkCollisionWithList(player, coins);
+  let coin = Game.more.checkCollisionWithList(player, coins);
   if (coin) {
     collectCoin(coin);
   }
 
-  if (Game.isRunning() && !isInvincible && Game.checkCollision(player, enemy)) {
+  if (Game.more.isRunning() && !isInvincible && Game.checkCollision(player, enemy)) {
     loseLife();
   }
 });

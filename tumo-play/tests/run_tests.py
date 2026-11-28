@@ -70,15 +70,15 @@ def main():
 
         # 2. Pages load without console errors/warnings (file:// and http://)
         for base in (file_base, http_base):
-            for name in ("playground/index.html", "playground/exemplo-basico.html"):
+            for name in ("playground/index.html", "game-versions/game.html", "game-versions/game-extra.html"):
                 page, messages = open_page(browser, f"{base}/{name}")
                 page.wait_for_timeout(500)
                 report(f"console clean: {base.split(':')[0]} {name}", not problems(messages), problems(messages))
                 page.close()
 
         # 3. Playground behaviour
-        page, messages = open_page(browser, f"{http_base}/playground/index.html")
-        info = page.evaluate("({ coins: coins.length, lives: Game.getLives(), score: Game.getScore(), running: Game.isRunning() })")
+        page, messages = open_page(browser, f"{http_base}/game-versions/game-extra.html")
+        info = page.evaluate("({ coins: coins.length, lives: Game.ui.getLives(), score: Game.ui.getScore(), running: Game.more.isRunning() })")
         report("playground starts with 5 coins, 3 lives, 0 points", info == {"coins": 5, "lives": 3, "score": 0, "running": True}, info)
 
         x0 = page.evaluate("player.x")
@@ -96,22 +96,22 @@ def main():
         # Collect a coin by placing it under the player.
         page.evaluate("coins[0].setPosition(player.x + 5, player.y + 5)")
         page.wait_for_timeout(100)
-        info = page.evaluate("({ coins: coins.length, score: Game.getScore(), sprites: Game.getSprites().length })")
+        info = page.evaluate("({ coins: coins.length, score: Game.ui.getScore(), sprites: Game.more.getSprites().length })")
         report("coin gives 1 point and is replaced", info == {"coins": 5, "score": 1, "sprites": 7}, info)
 
         # Touch the enemy.
         page.evaluate("enemy.speedX = 0; enemy.speedY = 0; enemy.setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        info = page.evaluate("({ lives: Game.getLives(), inv: isInvincible, x: player.x })")
+        info = page.evaluate("({ lives: Game.ui.getLives(), inv: isInvincible, x: player.x })")
         report("enemy takes a life + invincibility + back to start", info["lives"] == 2 and info["inv"] and info["x"] == 30, info)
         page.evaluate("enemy.setPosition(500, 50)")
         page.wait_for_timeout(1300)
         report("invincibility ends after ~1 s", page.evaluate("isInvincible") is False)
 
         # Victory.
-        page.evaluate("enemy.setPosition(500, 50); Game.setScore(9); coins[0].setPosition(player.x, player.y)")
+        page.evaluate("enemy.setPosition(500, 50); Game.ui.setScore(9); coins[0].setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        report("10 points → game stops", page.evaluate("Game.isRunning()") is False)
+        report("10 points → game stops", page.evaluate("Game.more.isRunning()") is False)
 
         # Restart several times; speed must not double.
         for _ in range(3):
@@ -119,7 +119,7 @@ def main():
             page.wait_for_timeout(50)
         page.click("#restart-button")
         page.wait_for_timeout(50)
-        info = page.evaluate("({ coins: coins.length, lives: Game.getLives(), score: Game.getScore(), running: Game.isRunning(), sprites: Game.getSprites().length, focused: document.activeElement.id })")
+        info = page.evaluate("({ coins: coins.length, lives: Game.ui.getLives(), score: Game.ui.getScore(), running: Game.more.isRunning(), sprites: Game.more.getSprites().length, focused: document.activeElement.id })")
         report("restart resets everything", info == {"coins": 5, "lives": 3, "score": 0, "running": True, "sprites": 7, "focused": ""}, info)
         page.evaluate("enemy.speedX = 0; enemy.speedY = 0; enemy.setPosition(500, 50); player.setPosition(100, 100)")
         x0 = page.evaluate("player.x")
@@ -130,15 +130,15 @@ def main():
         report("speed does not double after restarts (~4 px/update)", 100 <= moved <= 140, moved)
 
         # Game over.
-        page.evaluate("Game.setLives(1); isInvincible = false; enemy.setPosition(player.x, player.y)")
+        page.evaluate("Game.ui.setLives(1); isInvincible = false; enemy.setPosition(player.x, player.y)")
         page.wait_for_timeout(100)
-        report("0 lives → game over", page.evaluate("Game.getLives() === 0 && !Game.isRunning()"))
+        report("0 lives → game over", page.evaluate("Game.ui.getLives() === 0 && !Game.more.isRunning()"))
         report("no console problems while playing", not problems(messages), problems(messages))
         page.close()
 
         # 4. Layout widths
         for width in (360, 768, 1440):
-            page, _ = open_page(browser, f"{http_base}/playground/index.html", width)
+            page, _ = open_page(browser, f"{http_base}/game-versions/game-extra.html", width)
             overflow = page.evaluate("document.documentElement.scrollWidth > window.innerWidth")
             report(f"no horizontal scroll at {width}px", not overflow)
             pass

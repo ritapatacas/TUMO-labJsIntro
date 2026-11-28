@@ -8,10 +8,11 @@ tumo-play/
 ├── lib/
 │   └── tumoplay.js            ← the library (one single file)
 ├── playground/
-│   ├── index.html             ← the test game "TumoPlay Playground"
-│   ├── style.css
-│   ├── game.js                ← the game code (written the way a student would write it)
-│   └── exemplo-basico.html    ← the simplest example: a square that moves
+│   ├── index.html             ← the starting point students receive (only the blue player)
+│   └── game-start.js
+├── game-versions/
+│   ├── game.html / game.js    ← the MVP game every student should build
+│   └── game-extra.html / game-extra.js  ← extra features, for students who finish early
 └── tests/
     ├── tests.html             ← automatic library tests (open in the browser)
     └── run_tests.py           ← runs everything in a headless browser (instructors only)
@@ -57,7 +58,7 @@ This is the minimal skeleton of a game:
   <script src="../lib/tumoplay.js"></script>   <!-- 1st the library -->
   <script>
     // 2nd your game
-    Game.createGame({ width: 600, height: 400 });
+    Game.setup.createGame({ width: 600, height: 400 });
 
     let player = Game.createSprite({ x: 50, y: 50, color: "#3b82f6" });
 
@@ -77,11 +78,11 @@ The order is always: **create the game → create things → say what happens �
 
 ## 4. List of available functions
 
-Always write `Game.` before the name (for example `Game.createGame(...)`).
+Always write `Game.` before the name (for example `Game.setup.createGame(...)`).
 
 | Group | Functions |
 |---|---|
-| **A. Setup** | `createGame`, `startGame`, `stopGame`, `clear`, `isRunning`, `width`, `height` |
+| **A. Setup** | `setup.createGame`, `startGame`, `setup.stopGame`, `setup.clear`, `more.isRunning`, `width`, `height` |
 | **B. Drawing** | `drawRect`, `drawCircle`, `drawText`, `drawImage`, `clearCanvas` |
 | **C. Sprites** | `createSprite`, `removeSprite`, `getSprites` and, on each sprite: `move`, `setPosition`, `setColor`, `show`, `hide`, `remove` |
 | **D. Keyboard** | `onKey`, `onKeyDown`, `onKeyUp`, `isKeyPressed` |
@@ -94,19 +95,21 @@ Always write `Game.` before the name (for example `Game.createGame(...)`).
 
 ## 5. Detailed reference
 
+> **Tip:** `console.log(Game)` shows the essentials first (`startGame`, `createSprite`, `onKey`, `onUpdate`, `checkCollision`, `width`, `height`, `player`...). The more specific functions are grouped inside sub-objects: `Game.setup` (`createGame`, `stopGame`, `clear`), `Game.keys`, `Game.draw`, `Game.ui` and `Game.more` (e.g. `Game.ui.setScore(0)`, `Game.keys.onDown("Enter", f)`, `Game.draw.rect(...)`). `random()` and `randomInt()` are plain functions, used without `Game.`.
+
 ### A. Setup
 
 **`createGame(options)`** creates the game area (the *canvas*). If the page has an element with `id="tumoplay"`, the game appears inside it; otherwise at the end of the page.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `width` | 600 | Width in pixels |
-| `height` | 400 | Height in pixels |
+| `width` | window width | Width in pixels |
+| `height` | window height | Height in pixels |
 | `background` | `"#111111"` | Background colour |
 | `title` | — | Browser tab title |
 
 ```js
-Game.createGame({ width: 800, height: 450, background: "navy", title: "Pixel Quest" });
+Game.setup.createGame({ width: 800, height: 450, background: "navy", title: "Pixel Quest" });
 ```
 
 **`startGame()`** gets the game going: `onUpdate`, `onKey`, speeds and `delay` start working.
@@ -114,7 +117,7 @@ Game.createGame({ width: 800, height: 450, background: "navy", title: "Pixel Que
 **`stopGame()`** pauses the game. The screen keeps being drawn, so a message like "Game Over" still shows.
 
 ```js
-Game.stopGame();
+Game.setup.stopGame();
 Game.showMessage("PAUSE");
 ```
 
@@ -123,17 +126,17 @@ Game.showMessage("PAUSE");
 **`isRunning()`** returns `true` if the game is running.
 
 ```js
-if (Game.isRunning()) {
-  Game.stopGame();
+if (Game.more.isRunning()) {
+  Game.setup.stopGame();
 } else {
   Game.startGame();
 }
 ```
 
-**`Game.width`** and **`Game.height`** give the game size, so you don't write "magic" numbers:
+**`Game.size.width`** and **`Game.size.height`** give the game size, so you don't write "magic" numbers. You can also change them (`Game.size.width = 800;`) to resize the game area:
 
 ```js
-player.x = Game.width - player.width;   // against the right edge
+player.x = Game.size.width - player.width;   // against the right edge
 ```
 
 ### B. Drawing
@@ -143,13 +146,13 @@ player.x = Game.width - player.width;   // against the right edge
 **`drawRect(x, y, width, height, color)`** draws a rectangle (`x, y` = top-left corner).
 
 ```js
-Game.drawRect(0, 380, 600, 20, "green");   // ground
+Game.draw.rect(0, 380, 600, 20, "green");   // ground
 ```
 
 **`drawCircle(x, y, radius, color)`** draws a circle. ⚠️ Here `x, y` is the circle's **centre**.
 
 ```js
-Game.drawCircle(300, 200, 50, "yellow");   // sun in the middle of the screen
+Game.draw.circle(300, 200, 50, "yellow");   // sun in the middle of the screen
 ```
 
 **`drawText(text, x, y, options)`** writes text. Numbers work too.
@@ -165,13 +168,13 @@ Game.drawCircle(300, 200, 50, "yellow");   // sun in the middle of the screen
 With `align: "center"`, `x` becomes the **middle** of the text.
 
 ```js
-Game.drawText("Level 1", 300, 20, { size: 30, color: "cyan", align: "center", bold: true });
+Game.draw.text("Level 1", 300, 20, { size: 30, color: "cyan", align: "center", bold: true });
 ```
 
 **`drawImage(image, x, y, width, height)`** draws an image from a URL or an image element. While it loads, nothing is drawn (no error). Without `width`/`height`, it uses the original size.
 
 ```js
-Game.drawImage("background.png", 0, 0, 600, 400);
+Game.draw.image("background.png", 0, 0, 600, 400);
 ```
 
 **`clearCanvas()`** clears the `draw…` drawings. It doesn't touch sprites.
@@ -186,7 +189,7 @@ A **sprite** is a game object (player, coin, enemy...). Once created, it is draw
 
 | Property | Default | Meaning |
 |---|---|---|
-| `x`, `y` | 0 | Top-left corner |
+| `x`, `y` | centre of the game area | Top-left corner |
 | `width`, `height` | 32 | Size |
 | `color` | `"white"` | Colour |
 | `visible` | `true` | Whether it shows |
@@ -217,7 +220,7 @@ Methods on each sprite:
 **`getSprites()`** returns a list (copy) of all sprites in the game.
 
 ```js
-console.log("There are " + Game.getSprites().length + " sprites in the game");
+console.log("There are " + Game.more.getSprites().length + " sprites in the game");
 ```
 
 ### D. Keyboard
@@ -246,7 +249,7 @@ Game.onKey({
 **`onKeyDown(key, callback)`** calls the function **once** when you press the key. Works even with the game stopped.
 
 ```js
-Game.onKeyDown("Space", function () {
+Game.keys.onDown("Space", function () {
   player.setColor("orange");
 });
 ```
@@ -257,7 +260,7 @@ Game.onKeyDown("Space", function () {
 
 ```js
 Game.onUpdate(function () {
-  if (Game.isKeyPressed("Shift")) {
+  if (Game.keys.isPressed("Shift")) {
     playerSpeed = 8;
   } else {
     playerSpeed = 4;
@@ -271,7 +274,7 @@ Game.onUpdate(function () {
 
 ```js
 Game.onUpdate(function (deltaTime) {
-  if (player.x > Game.width) {
+  if (player.x > Game.size.width) {
     player.x = 0;
   }
 });
@@ -285,17 +288,17 @@ If there's an error inside this function, TumoPlay shows it in the console **onc
 
 ```js
 if (Game.checkCollision(player, enemy)) {
-  Game.setLives(Game.getLives() - 1);
+  Game.ui.setLives(Game.ui.getLives() - 1);
 }
 ```
 
 **`checkCollisionWithList(sprite, list)`** searches an array and returns **the sprite** you touched, or `null`:
 
 ```js
-let coin = Game.checkCollisionWithList(player, coins);
+let coin = Game.more.checkCollisionWithList(player, coins);
 if (coin) {
   coin.remove();
-  Game.addScore(1);
+  Game.ui.addScore(1);
 }
 ```
 
@@ -306,22 +309,22 @@ if (coin) {
 **`randomInt(min, max)`** returns a whole number between `min` and `max`, **including both**.
 
 ```js
-let die = Game.randomInt(1, 6);   // 1, 2, 3, 4, 5 or 6
+let die = randomInt(1, 6);   // 1, 2, 3, 4, 5 or 6
 ```
 
 **`delay(ms, callback)`** calls the function after `ms` milliseconds of game time. If the game stops, the time stops too. Returns a number (the id).
 
 ```js
-Game.delay(2000, function () {
-  Game.hideMessage();
+Game.more.delay(2000, function () {
+  Game.ui.hideMessage();
 });
 ```
 
 **`cancelDelay(id)`** (extra) cancels a `delay`.
 
 ```js
-let timer = Game.delay(5000, explode);
-Game.cancelDelay(timer);   // it won't explode after all
+let timer = Game.more.delay(5000, explode);
+Game.more.cancelDelay(timer);   // it won't explode after all
 ```
 
 ### H. Game UI
@@ -339,9 +342,9 @@ Score and lives only appear on screen after you first use `setScore`, `addScore`
 | `hideMessage()` | Hides the message |
 
 ```js
-Game.setLives(Game.getLives() - 1);
-if (Game.getLives() === 0) {
-  Game.stopGame();
+Game.ui.setLives(Game.ui.getLives() - 1);
+if (Game.ui.getLives() === 0) {
+  Game.setup.stopGame();
   Game.showMessage("GAME OVER\nPress Enter");
 }
 ```
@@ -367,8 +370,8 @@ Game.onUpdate(function () {
   if (player.x < 0) {
     player.x = 0;
   }
-  if (player.x > Game.width - player.width) {
-    player.x = Game.width - player.width;
+  if (player.x > Game.size.width - player.width) {
+    player.x = Game.size.width - player.width;
   }
 });
 ```
@@ -379,18 +382,18 @@ Game.onUpdate(function () {
 let coins = [];
 for (let i = 0; i < 5; i++) {
   let coin = Game.createSprite({
-    x: Game.randomInt(0, 580), y: Game.randomInt(0, 380),
+    x: randomInt(0, 580), y: randomInt(0, 380),
     width: 20, height: 20, color: "gold", shape: "circle"
   });
   coins.push(coin);
 }
 
 Game.onUpdate(function () {
-  let coin = Game.checkCollisionWithList(player, coins);
+  let coin = Game.more.checkCollisionWithList(player, coins);
   if (coin) {
     coin.remove();                          // off the screen
     coins.splice(coins.indexOf(coin), 1);   // out of the array
-    Game.addScore(1);
+    Game.ui.addScore(1);
   }
 });
 ```
@@ -401,10 +404,10 @@ Game.onUpdate(function () {
 let enemy = Game.createSprite({ x: 300, y: 100, color: "red", speedX: 3, speedY: 2 });
 
 Game.onUpdate(function () {
-  if (enemy.x < 0 || enemy.x > Game.width - enemy.width) {
+  if (enemy.x < 0 || enemy.x > Game.size.width - enemy.width) {
     enemy.speedX = -enemy.speedX;
   }
-  if (enemy.y < 0 || enemy.y > Game.height - enemy.height) {
+  if (enemy.y < 0 || enemy.y > Game.size.height - enemy.height) {
     enemy.speedY = -enemy.speedY;
   }
 });
@@ -414,8 +417,8 @@ Game.onUpdate(function () {
 
 ```js
 Game.showMessage("Get ready!");
-Game.delay(1500, function () {
-  Game.hideMessage();
+Game.more.delay(1500, function () {
+  Game.ui.hideMessage();
 });
 ```
 
@@ -423,16 +426,16 @@ Game.delay(1500, function () {
 
 ```js
 function resetGame() {
-  Game.clear();
+  Game.setup.clear();
   coins = [];
   player = Game.createSprite({ x: 30, y: 30, color: "#3b82f6" });
-  Game.setScore(0);
-  Game.setLives(3);
+  Game.ui.setScore(0);
+  Game.ui.setLives(3);
   Game.startGame();
 }
 
 // Register callbacks only ONCE, outside resetGame()!
-Game.onKeyDown("Enter", function () {
+Game.keys.onDown("Enter", function () {
   resetGame();
 });
 
@@ -484,11 +487,11 @@ When the script gets big, move it to its own `.js` file, like `playground/game.j
 
 ## 10. Beginner code challenges
 
-From easiest to hardest. Start from `exemplo-basico.html`.
+From easiest to hardest. Start from `playground/index.html`.
 
 1. **Colour on Space:** when you press Space, the player turns orange. When you release it, back to blue. *(Hint: `onKeyDown` and `onKeyUp`.)*
 2. **Turbo:** while you hold Shift, the player moves twice as fast. *(Hint: `isKeyPressed` inside `onUpdate`.)*
-3. **Wrap around:** when the player leaves on the right, they appear on the left. *(Hint: `if (player.x > Game.width)`.)*
+3. **Wrap around:** when the player leaves on the right, they appear on the left. *(Hint: `if (player.x > Game.size.width)`.)*
 4. **Single coin:** create a coin at a random position. When you catch it, you get 1 point and it jumps elsewhere. *(Hint: `randomInt` and `setPosition`.)*
 5. **Faster enemy:** in the Playground, make the enemy speed up a little every 5 points. *(Hint: `getScore() % 5 === 0`.)*
 6. **Clock:** give the player 30 seconds. When time is up, show "TIME!" and stop the game. *(Hint: add up `deltaTime` in a variable, or use `delay`.)*
